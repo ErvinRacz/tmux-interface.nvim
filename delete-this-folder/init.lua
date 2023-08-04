@@ -66,10 +66,6 @@ local function tmux_navigate(direction)
 end
 
 function M.setup(user_config)
-    -- disable nvim tmux navigation when a tmux pane is zoomed
-    -- defaults to false
-    config.disable_when_zoomed = user_config.disable_when_zoomed or false
-
     -- keybindings for the navigation
     config.keybindings = user_config.keybindings or {}
 

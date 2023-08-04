@@ -10,21 +10,32 @@ local function tmux_command(command)
     return vim.fn.system("tmux -S " .. tmux_socket .. " " .. command)
 end
 
-function util.get_current_command_map_of_panes()
-    local output = tmux_command("list-panes -a -F '#{pane_id} #{pane_current_command}'")
+function util.get_current_session()
+    local output = tmux_command("display-message -p '#{session_id} #{session_name}'")
+    return output:match("(%$%d+) (.+)")
+end
+
+-- returns a map of the commands that are running in the panes of the current session
+function util.get_current_command_map_of_windows()
+    local current_session_id, _ = util.get_current_session()
+    local output = tmux_command(
+        "list-panes -a -F '#{session_id} #{session_name} #{window_id} #{window_name} #{pane_current_command}'")
     local map = {}
     for line in output:gmatch("[^\r\n]+") do
-        local pane_id, pane_current_command = line:match("(%d+) (.+)")
-        map[pane_id] = pane_current_command
+        local session_id, _, window_id, _, pane_current_command = line:match(
+            "^(%$%d+) (.+) (%@%d+) (.+) (.+)$")
+        if (current_session_id == session_id) then
+            map[window_id] = pane_current_command
+        end
     end
     return map
 end
 
-function util.find_first_non_nvim_pane()
-    local map = util.get_current_command_map_of_panes()
-    for pane_id, pane_current_command in pairs(map) do
+function util.find_first_non_nvim_window()
+    local map = util.get_current_command_map_of_windows()
+    for window_id, pane_current_command in pairs(map) do
         if pane_current_command ~= "nvim" then
-            return pane_id
+            return window_id
         end
     end
     return nil
@@ -32,14 +43,24 @@ end
 
 -- Creates a new window and returns the window id and pane id of the new window
 function util.create_new_window()
-    local output = tmux_command("new-window -P -F '#{window_id} #{pane_id}'")
-    local window_id, pane_id = output:match("(%d+) (%d+)")
-    return window_id, pane_id
+    local output = tmux_command("new-window -P -F '#{window_id}'")
+    local window_id = output:match("(%@%d+)")
+    return window_id
 end
 
-function util.tmux_change_pane(pane_id)
-    tmux_command("select-pane -t " .. pane_id)
+-- Checks if the window with the given window id is still alive
+function util.is_window_alive(window_id)
+    local output = tmux_command("list-windows -F '#{window_id}'")
+    for line in output:gmatch("[^\r\n]+") do
+        if line == window_id then
+            return true
+        end
+    end
+    return false
+end
+
+function util.select_window(window_id)
+    tmux_command("select-window -t " .. window_id)
 end
 
 return util
-
