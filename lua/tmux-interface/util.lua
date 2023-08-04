@@ -63,4 +63,17 @@ function util.select_window(window_id)
     tmux_command("select-window -t " .. window_id)
 end
 
+-- Read the last active tmux window ID from a file e.g. /tmp/tmux-interface-last-window-id
+function util.read_last_tmux_window_id_from_file(path)
+    local file = io.open(path, "r")
+    if file == nil then
+        return nil
+    end
+    local window_id = file:read("*all")
+    window_id = window_id:match("(%@%d+)")
+    file:close()
+
+    return window_id
+end
+
 return util
