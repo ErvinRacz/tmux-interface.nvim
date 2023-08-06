@@ -76,4 +76,13 @@ function util.read_last_tmux_window_id_from_file(path)
     return window_id
 end
 
+function util.select_next_window()
+    tmux_command("select-window -n")
+end
+
+
+function util.select_previous_window()
+    tmux_command("select-window -p")
+end
+
 return util
